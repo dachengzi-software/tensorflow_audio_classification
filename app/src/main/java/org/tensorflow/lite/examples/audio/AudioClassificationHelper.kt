@@ -107,8 +107,25 @@ class AudioClassificationHelper(
 
         val interval = (lengthInMilliSeconds * (1 - overlap)).toLong()
 
-        executor.scheduleAtFixedRate(
-            classifyRunnable,
+        executor.scheduleWithFixedDelay(
+            {
+
+                tensorAudio.load(recorder)
+                var inferenceTime = SystemClock.uptimeMillis()
+                val output = classifier.classify(tensorAudio)
+                inferenceTime = SystemClock.uptimeMillis() - inferenceTime
+                val categories = output[0].categories
+                if (categories.isNotEmpty()) {
+                    Log.d("KWS","size: ${categories.size}   categories: $categories")
+                    categories.forEach { top ->
+                        Log.d(
+                            "KWS",
+                            "检测到关键词: ${top.label} , 置信度: ${top.score} , 耗时: $inferenceTime ms"
+                        )
+                    }
+                }
+
+            },
             0,
             interval,
             TimeUnit.MILLISECONDS)
@@ -126,6 +143,7 @@ class AudioClassificationHelper(
         recorder.stop()
         executor.shutdownNow()
     }
+
 
     companion object {
         const val DELEGATE_CPU = 0
